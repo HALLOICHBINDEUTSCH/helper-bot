@@ -22,12 +22,18 @@ function getCode() {
   return localStorage.getItem("shadow_code") || "";
 }
 
+let lastPhotos = "";
+
 function showUsage(r) {
   const el = document.getElementById("usage");
   if (!el || !r || r.left === undefined) return;
-  el.innerText = r.premium
-    ? "⭐ Premium: unlimited messages"
-    : "Free plan: " + r.left + "/" + FREE_LIMIT + " AI messages left today";
+  if (r.imgMax !== undefined) {
+    lastPhotos = " · 📷 " + r.imgLeft + "/" + r.imgMax + " photos left";
+  }
+  el.innerText =
+    (r.premium
+      ? "⭐ Premium: unlimited messages"
+      : "Free plan: " + r.left + "/" + FREE_LIMIT + " AI messages left today") + lastPhotos;
 }
 
 async function callWorker(payload) {
@@ -297,6 +303,72 @@ function startVoice() {
   rec.start();
 }
 
+// ================== PHOTO QUESTIONS ==================
+function pickPhoto() {
+  document.getElementById("photo").click();
+}
+
+// shrink the photo (max 1280px, JPEG) so it uploads fast
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject();
+    };
+    img.src = url;
+  });
+}
+
+async function handlePhoto(input) {
+  const file = input.files[0];
+  input.value = "";
+  if (!file) return;
+
+  const inputBox = document.getElementById("question");
+  const q = inputBox.value.trim();
+  inputBox.value = "";
+
+  let dataUrl;
+  try {
+    dataUrl = await shrinkImage(file);
+  } catch (e) {
+    typeMessage("❌ Could not read that photo. Try another one.");
+    return;
+  }
+
+  // show the photo in the chat
+  const chatBox = document.getElementById("chat-box");
+  const msg = addMessage(q || "📷 Photo question", "user");
+  const pic = document.createElement("img");
+  pic.src = dataUrl;
+  pic.style.cssText = "display:block;max-width:100%;border-radius:8px;margin-top:6px;";
+  msg.appendChild(pic);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  const thinking = addMessage("⏳ Reading your photo...", "bot");
+  try {
+    const result = await callWorker({ mode: "image", image: dataUrl.split(",")[1], question: q });
+    thinking.remove();
+    typeMessage(result.answer || "❌ No answer received.");
+    showUsage(result);
+    if (result.limit) openUpgrade();
+  } catch (e) {
+    thinking.remove();
+    typeMessage("❌ Could not reach the AI. Try again.");
+  }
+}
+
 // ================== UPGRADE ==================
 function openUpgrade() {
   document.getElementById("upgrade").style.display = "flex";
@@ -316,7 +388,7 @@ async function redeemCode() {
     if (r.ok) {
       localStorage.setItem("shadow_code", code);
       msg.innerText = "✅ Premium unlocked!";
-      showUsage(r);
+      callWorker({ mode: "status" }).then(showUsage).catch(() => {});
       setTimeout(closeUpgrade, 1200);
     } else {
       msg.innerText = "❌ " + (r.answer || "Invalid code.");
