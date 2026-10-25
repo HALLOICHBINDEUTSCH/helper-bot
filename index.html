@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Homework Helper Pro</title>
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-<button onclick="mode='normal'">Normal</button>
-<button onclick="mode='exam'">Exam Mode</button>
-<button onclick="mode='check'">Check Answer</button>
-<button onclick="startVoice()">🎤 Speak</button>
 <div class="chat-container">
-<h1>🤖 Shadow AI Helper</h1>
+  <h1>🤖 Shadow AI Helper</h1>
+
+  <div class="modes">
+    <button id="btn-normal" class="active" onclick="setMode('normal')">Normal</button>
+    <button id="btn-exam" onclick="setMode('exam')">Exam Mode</button>
+    <button id="btn-check" onclick="setMode('check')">Check Answer</button>
+    <button onclick="startVoice()">🎤 Speak</button>
+  </div>
 
   <div id="chat-box"></div>
 
@@ -19,8 +24,8 @@
     <input id="question" placeholder="Ask anything...">
     <button onclick="getAnswer()">Send</button>
   </div>
-  </div>
 </div>
+
 <script src="data.js"></script>
 <script src="script.js"></script>
 </body>
