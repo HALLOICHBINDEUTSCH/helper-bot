@@ -28,6 +28,8 @@
     <button id="btn-check" onclick="setMode('check')">Check Answer</button>
     <button onclick="startVoice()">🎤 Speak</button>
     <button onclick="openUpgrade()">⭐ Premium</button>
+       <button onclick="pickPhoto()">📷 Photo</button>
+   <input type="file" id="photo" accept="image/*" style="display:none" onchange="handlePhoto(this)">
   </div>
 
   <div id="usage" class="usage"></div>
