@@ -36,11 +36,17 @@ function showUsage(r) {
       : "Free plan: " + r.left + "/" + FREE_LIMIT + " AI messages left today") + lastPhotos;
 }
 
+function getContext() {
+  const s = document.getElementById("subject");
+  const g = document.getElementById("grade");
+  return { subject: s ? s.value : "", grade: g ? g.value : "" };
+}
+
 async function callWorker(payload) {
   const res = await fetch(WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uid: getUid(), code: getCode(), ...payload }),
+    body: JSON.stringify({ uid: getUid(), code: getCode(), ...getContext(), ...payload }),
   });
   return res.json();
 }
@@ -87,10 +93,7 @@ function setMode(m) {
   }
 
   if (m === "exam") {
-    typeMessage(
-      "📘 Exam Mode: type a chapter name.\nAvailable: " +
-        Object.keys(questionBank).join(", ")
-    );
+    typeMessage(chapterHelp());
   } else if (m === "check") {
     typeMessage(
       "📊 Check Mode: type your answer.\n" +
@@ -192,6 +195,7 @@ async function askAI(aiMode, question, extra) {
         extra: extra || "",
         uid: getUid(),
         code: getCode(),
+        ...getContext(),
       }),
     });
     const result = await res.json();
@@ -199,6 +203,7 @@ async function askAI(aiMode, question, extra) {
     typeMessage(result.answer || "❌ No answer received.");
     showUsage(result);
     if (result.limit) openUpgrade();
+    return result.limit ? "" : result.answer;
   } catch (e) {
     thinking.remove();
     typeMessage("❌ Could not reach the AI. Check the internet or try again.");
@@ -207,16 +212,90 @@ async function askAI(aiMode, question, extra) {
 
 // ================== EXAM QUESTION BANK ==================
 const questionBank = {
-  light: ["What is reflection of light?", "Define refraction"],
-  force: ["What is force?", "Define friction"],
-  motion: ["What is motion?", "Define speed"],
-  algebra: ["Solve: 2x + 3 = 7"],
+  // Maths
+  algebra: ["Solve: 2x + 3 = 7", "Solve: 3x - 5 = 10", "Factorise: x^2 + 5x + 6"],
+
+  // Physics
+  light: ["What is reflection of light?", "Define refraction", "State the laws of reflection."],
+  force: ["What is force?", "Define friction", "State Newton's second law of motion."],
+  motion: ["What is motion?", "Define speed", "What is the difference between distance and displacement?"],
+  sound: ["What is an echo?", "Define frequency and write its unit.", "Why can sound not travel in a vacuum?"],
+  electricity: ["State Ohm's law.", "What is the difference between series and parallel circuits?", "Define electric current and write its unit."],
+
+  // Chemistry
+  "acids and bases": ["What is an indicator? Give two examples.", "What happens when an acid reacts with a metal?", "What is pH? What is the pH of a neutral solution?"],
+  atoms: ["Define atom and molecule.", "What are protons, neutrons and electrons?", "What is the atomic number of an element?"],
+  metals: ["Write two physical properties of metals.", "What is rusting? How can it be prevented?", "What is an alloy? Give one example."],
+
+  // Biology
+  cell: ["What is a cell?", "Write two differences between plant and animal cells.", "What is the function of the nucleus?"],
+  photosynthesis: ["Define photosynthesis.", "Write the equation of photosynthesis.", "Why are stomata important?"],
+  digestion: ["Name the organs of the human digestive system.", "What is the role of saliva?", "Where is digested food absorbed in the body?"],
+
+  // Computer Science
+  "computer basics": ["What is the difference between hardware and software?", "Name any four input devices.", "What is the function of the CPU?"],
+  internet: ["What is the difference between the Internet and the World Wide Web?", "What is a web browser? Give two examples.", "What is a URL?"],
+  "binary numbers": ["Convert 10 (decimal) to binary.", "Convert 1011 (binary) to decimal.", "Why do computers use binary?"],
+  python: ["What is a variable in Python?", "Write a program to print the numbers 1 to 5.", "What is the difference between a list and a tuple?"],
+  html: ["What does HTML stand for?", "What is the use of the <a> tag?", "Write the tags needed for a simple web page with a heading."],
+
+  // English
+  tenses: ["Write the past tense of: go, eat, write.", "Identify the tense: 'She has finished her homework.'", "Change to future tense: 'I play cricket.'"],
+  "parts of speech": ["Define noun, pronoun and adjective with one example each.", "Identify the verb: 'The dog barked loudly.'", "What is an adverb? Give two examples."],
+  "letter writing": ["What are the main parts of a formal letter?", "Write a short letter to your principal asking for leave.", "What is the difference between a formal and an informal letter?"],
+  "essay writing": ["Write the steps to plan an essay.", "Write a short paragraph on 'My School'.", "What is the difference between a paragraph and an essay?"],
+
+  // Hindi (type the chapter name in English letters)
+  sangya: ["संज्ञा किसे कहते हैं? इसके भेद लिखिए।", "व्यक्तिवाचक संज्ञा के दो उदाहरण दीजिए।", "इनमें से संज्ञा छाँटिए: राम, सुंदर, दौड़ना, दिल्ली।"],
+  sarvanam: ["सर्वनाम किसे कहते हैं? दो उदाहरण दीजिए।", "सर्वनाम के भेद लिखिए।", "रिक्त स्थान भरिए: ___ विद्यालय जा रहा है। (वह / वे)"],
+  "patra lekhan": ["औपचारिक पत्र के मुख्य भाग कौन-कौन से होते हैं?", "प्रधानाचार्य को अवकाश के लिए प्रार्थना पत्र लिखिए।", "औपचारिक और अनौपचारिक पत्र में क्या अंतर है?"],
+
+  // Cricket
+  "cricket rules": ["What is LBW?", "How many players are in a team, and how many overs are bowled in a T20 innings?", "What is a no-ball and what happens after it?"],
+  "cricket formats": ["Name the three international formats of cricket.", "What is the difference between a Test match and an ODI?", "What is the DLS method used for?"],
+  "cricket basics": ["Name any five fielding positions.", "What is the difference between a bowled and a caught dismissal?", "What does a wicketkeeper do?"],
 };
 
-function generateQuestions(chapter) {
-  const questions = questionBank[chapter];
+const chapterGroups = {
+  Maths: ["algebra"],
+  Physics: ["light", "force", "motion", "sound", "electricity"],
+  Chemistry: ["acids and bases", "atoms", "metals"],
+  Biology: ["cell", "photosynthesis", "digestion"],
+  "Computer Science": ["computer basics", "internet", "binary numbers", "python", "html"],
+  English: ["tenses", "parts of speech", "letter writing", "essay writing"],
+  Hindi: ["sangya", "sarvanam", "patra lekhan"],
+  Cricket: ["cricket rules", "cricket formats", "cricket basics"],
+};
+
+function chapterHelp() {
+  let out = "📘 Exam Mode: type a chapter name from this list.\nAny other chapter works too, and the AI will make the questions.\n";
+  for (const group in chapterGroups) {
+    out += "\n" + group + ": " + chapterGroups[group].join(", ");
+  }
+  return out;
+}
+
+async function generateQuestions(chapter) {
+  let questions = questionBank[chapter];
+
+  // not in the list: let the AI make the questions
   if (!questions) {
-    typeMessage("❌ Chapter not found. Available: " + Object.keys(questionBank).join(", "));
+    const s = getContext().subject;
+    const text = await askAI(
+      "answer",
+      "Write 5 short exam questions (questions only, no answers, numbered 1 to 5) on the chapter: " +
+        chapter +
+        "." +
+        (s ? " Subject: " + s + "." : ""),
+      ""
+    );
+    if (!text) return;
+    examQuestions = text
+      .split("\n")
+      .map((l) => l.match(/^\s*\d+[.)]\s*(.+)/))
+      .filter(Boolean)
+      .map((m) => m[1].trim());
+    lastQuestion = examQuestions[0] || "";
     return;
   }
 
