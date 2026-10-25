@@ -111,3 +111,6 @@ button:hover {
     transform: translateX(-100%);
   }
 }
+   .modes { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+   .modes button { margin-left: 0; opacity: 0.6; }
+   .modes button.active { opacity: 1; outline: 2px solid white; }
