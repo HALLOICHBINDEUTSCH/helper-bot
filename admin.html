@@ -1,22 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin Panel</title>
 </head>
-<body>
+<body style="font-family: Arial, sans-serif; max-width: 420px; margin: 30px auto; padding: 10px;">
+  <h2>Admin: make a premium code</h2>
+  <p>Give the code to a customer only after you have received their payment.</p>
 
-<h1>Admin Panel</h1>
+  <input id="pw" type="password" placeholder="Admin password" style="width:100%; padding:8px; box-sizing:border-box;"><br><br>
+  <label>Days of premium:</label>
+  <input id="days" type="number" value="30" style="width:100%; padding:8px; box-sizing:border-box;"><br><br>
+  <button onclick="make()" style="padding:10px 16px;">Generate code</button>
 
-<p>👉 To add new questions, edit data.js manually.</p>
+  <h3 id="out"></h3>
 
-<p>Example:</p>
+  <script>
+    const WORKER_URL = "https://shadow-ai.k-10864.workers.dev";
 
-<pre>
-{
-  keywords: ["your keyword"],
-  answer: "your answer"
-}
-</pre>
-
+    async function make() {
+      const out = document.getElementById("out");
+      out.innerText = "Working...";
+      try {
+        const res = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: "newcode",
+            admin: document.getElementById("pw").value,
+            days: Number(document.getElementById("days").value),
+          }),
+        });
+        const d = await res.json();
+        out.innerText = d.code || d.answer || "Error";
+      } catch (e) {
+        out.innerText = "Could not reach the Worker.";
+      }
+    }
+  </script>
 </body>
 </html>

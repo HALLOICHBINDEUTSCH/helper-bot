@@ -1,10 +1,43 @@
 // ================== SETTINGS ==================
 // Paste your Cloudflare Worker URL here (you get it after deploying the Worker)
-   const WORKER_URL = "https://shadow-ai.k-10864.workers.dev";
+const WORKER_URL = "https://shadow-ai.k-10864.workers.dev";
 
 // false = use your data.js answers first, AI only when nothing is found (cheaper)
 // true  = always use AI, with your data.js answer given to it as notes
 const ALWAYS_USE_AI = false;
+
+// ================== PLAN / LIMIT ==================
+const FREE_LIMIT = 15; // must match the number in the Worker
+
+function getUid() {
+  let id = localStorage.getItem("shadow_uid");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("shadow_uid", id);
+  }
+  return id;
+}
+
+function getCode() {
+  return localStorage.getItem("shadow_code") || "";
+}
+
+function showUsage(r) {
+  const el = document.getElementById("usage");
+  if (!el || !r || r.left === undefined) return;
+  el.innerText = r.premium
+    ? "⭐ Premium: unlimited messages"
+    : "Free plan: " + r.left + "/" + FREE_LIMIT + " AI messages left today";
+}
+
+async function callWorker(payload) {
+  const res = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uid: getUid(), code: getCode(), ...payload }),
+  });
+  return res.json();
+}
 
 // ================== STATE ==================
 let mode = "normal";
@@ -147,11 +180,19 @@ async function askAI(aiMode, question, extra) {
     const res = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: aiMode, question: question, extra: extra || "" }),
+      body: JSON.stringify({
+        mode: aiMode,
+        question: question,
+        extra: extra || "",
+        uid: getUid(),
+        code: getCode(),
+      }),
     });
     const result = await res.json();
     thinking.remove();
     typeMessage(result.answer || "❌ No answer received.");
+    showUsage(result);
+    if (result.limit) openUpgrade();
   } catch (e) {
     thinking.remove();
     typeMessage("❌ Could not reach the AI. Check the internet or try again.");
@@ -255,6 +296,38 @@ function startVoice() {
   rec.onerror = () => typeMessage("❌ Could not hear you. Try again.");
   rec.start();
 }
+
+// ================== UPGRADE ==================
+function openUpgrade() {
+  document.getElementById("upgrade").style.display = "flex";
+}
+
+function closeUpgrade() {
+  document.getElementById("upgrade").style.display = "none";
+}
+
+async function redeemCode() {
+  const msg = document.getElementById("code-msg");
+  const code = document.getElementById("code-input").value.trim().toUpperCase();
+  if (!code) return;
+  msg.innerText = "Checking...";
+  try {
+    const r = await callWorker({ mode: "redeem", code: code });
+    if (r.ok) {
+      localStorage.setItem("shadow_code", code);
+      msg.innerText = "✅ Premium unlocked!";
+      showUsage(r);
+      setTimeout(closeUpgrade, 1200);
+    } else {
+      msg.innerText = "❌ " + (r.answer || "Invalid code.");
+    }
+  } catch (e) {
+    msg.innerText = "❌ Could not reach the server.";
+  }
+}
+
+// show how many messages are left when the page opens
+callWorker({ mode: "status" }).then(showUsage).catch(() => {});
 
 // ================== ENTER KEY ==================
 document.getElementById("question").addEventListener("keydown", (e) => {

@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Homework Helper Pro</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .usage { text-align: center; font-size: 13px; opacity: 0.8; margin-bottom: 8px; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 10; padding: 15px; }
+    .modal-box { background: #1e293b; border-radius: 15px; padding: 20px; max-width: 380px; width: 100%; line-height: 1.5; }
+    .modal-box input { width: 100%; box-sizing: border-box; margin: 8px 0; }
+    .modal-box button { margin: 4px 4px 0 0; }
+  </style>
 </head>
 
 <body>
@@ -16,13 +23,31 @@
     <button id="btn-exam" onclick="setMode('exam')">Exam Mode</button>
     <button id="btn-check" onclick="setMode('check')">Check Answer</button>
     <button onclick="startVoice()">🎤 Speak</button>
+    <button onclick="openUpgrade()">⭐ Premium</button>
   </div>
 
+  <div id="usage" class="usage"></div>
   <div id="chat-box"></div>
 
   <div class="input-area">
     <input id="question" placeholder="Ask anything...">
     <button onclick="getAnswer()">Send</button>
+  </div>
+</div>
+
+<div id="upgrade" class="modal">
+  <div class="modal-box">
+    <h2>⭐ Go Premium</h2>
+    <p><b>Free:</b> 15 AI messages per day<br><b>Premium:</b> unlimited messages</p>
+    <p>
+      1. To buy Premium (₹67 for 30 days), contact <b>+91 9958200988</b> on WhatsApp.<br>
+      2. You will get the UPI ID there. Pay and send the screenshot.<br>
+      3. You will get a code. Type it below.
+    </p>
+    <input id="code-input" placeholder="Enter your code">
+    <button onclick="redeemCode()">Unlock</button>
+    <button onclick="closeUpgrade()">Close</button>
+    <p id="code-msg"></p>
   </div>
 </div>
 
