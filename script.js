@@ -76,8 +76,8 @@ function typeMessage(text) {
   let i = 0;
   function typing() {
     if (i < text.length) {
-      botMsg.innerText += text[i];
-      i++;
+           botMsg.innerText += text.slice(i, i + 4);
+      i += 4;
       setTimeout(typing, 8);
     }
     chatBox.scrollTop = chatBox.scrollHeight;
